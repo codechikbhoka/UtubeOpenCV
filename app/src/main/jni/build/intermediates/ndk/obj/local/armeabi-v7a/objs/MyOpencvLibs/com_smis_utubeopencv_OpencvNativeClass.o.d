@@ -1,4 +1,4 @@
-build/intermediates/ndk/obj/local/armeabi-v7a/objs/MyOpencvLibs/com_smis_utubeopencv_OpencvNativeClass.o: \
+/home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/build/intermediates/ndk/obj/local/armeabi-v7a/objs/MyOpencvLibs/com_smis_utubeopencv_OpencvNativeClass.o: \
  /home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/com_smis_utubeopencv_OpencvNativeClass.cpp \
  /home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/com_smis_utubeopencv_OpencvNativeClass.h \
  /home/gomchik-1404/Software/OpenCV-android-3.0.0-sdk/sdk/native/jni/include/opencv2/opencv.hpp \
@@ -40,7 +40,12 @@ build/intermediates/ndk/obj/local/armeabi-v7a/objs/MyOpencvLibs/com_smis_utubeop
  /home/gomchik-1404/Software/OpenCV-android-3.0.0-sdk/sdk/native/jni/include/opencv2/contrib/retina.hpp \
  /home/gomchik-1404/Android/Sdk/ndk-bundle/sources/cxx-stl/gnu-libstdc++/4.9/include/valarray \
  /home/gomchik-1404/Software/OpenCV-android-3.0.0-sdk/sdk/native/jni/include/opencv2/contrib/openfabmap.hpp \
- /home/gomchik-1404/Android/Sdk/ndk-bundle/sources/cxx-stl/gnu-libstdc++/4.9/include/set
+ /home/gomchik-1404/Android/Sdk/ndk-bundle/sources/cxx-stl/gnu-libstdc++/4.9/include/set \
+ /home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/src/main/include/HandRegion.h \
+ /home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/src/main/include/./global.h \
+ /home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/src/main/include/MixGaussian.h \
+ /home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/src/main/include/ColorHistogram.h \
+ /home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/src/main/include/Fingertip.h
 
 /home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/com_smis_utubeopencv_OpencvNativeClass.h:
 
@@ -123,3 +128,13 @@ build/intermediates/ndk/obj/local/armeabi-v7a/objs/MyOpencvLibs/com_smis_utubeop
 /home/gomchik-1404/Software/OpenCV-android-3.0.0-sdk/sdk/native/jni/include/opencv2/contrib/openfabmap.hpp:
 
 /home/gomchik-1404/Android/Sdk/ndk-bundle/sources/cxx-stl/gnu-libstdc++/4.9/include/set:
+
+/home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/src/main/include/HandRegion.h:
+
+/home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/src/main/include/./global.h:
+
+/home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/src/main/include/MixGaussian.h:
+
+/home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/src/main/include/ColorHistogram.h:
+
+/home/gomchik-1404/Work/UtubeOpenCV/app/src/main/jni/src/main/include/Fingertip.h:
