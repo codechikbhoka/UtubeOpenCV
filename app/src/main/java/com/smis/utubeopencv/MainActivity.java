@@ -5,6 +5,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
@@ -14,12 +15,16 @@ import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 
-public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2{
+public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2, View.OnClickListener {
 
     private static String TAG = "MainActivity";
-    JavaCameraView javaCameraView;
-    Mat mRgba, mGray, mSilhoutte;
-    MarshMallowPermission marshMallowPermission = new MarshMallowPermission(this);
+    private JavaCameraView javaCameraView;
+    private Mat mRgba, mGray, mSilhoutte;
+    private MarshMallowPermission marshMallowPermission = new MarshMallowPermission(this);
+    private Button btnLearn, btnDebug, btnFilterAlgo;
+    private boolean debugMode = false;
+    private String algo = OpencvNativeClass.ALGO_GAUSSIAN;
+
 
     static {
         System.loadLibrary("MyOpencvLibs");
@@ -54,6 +59,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
+        btnLearn = (Button) findViewById(R.id.btnLearn);
+        btnLearn.setOnClickListener(this);
+        btnDebug = (Button) findViewById(R.id.btnDebug);
+        btnDebug.setOnClickListener(this);
+        btnFilterAlgo = (Button) findViewById(R.id.btnFilterAlgo);
+        btnFilterAlgo.setOnClickListener(this);
 
         javaCameraView = (JavaCameraView) findViewById(R.id.java_camera_view);
         javaCameraView.setVisibility(View.VISIBLE);
@@ -62,6 +73,28 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         String absPath = Environment.getExternalStorageDirectory().getAbsolutePath();
         OpencvNativeClass.initialise(absPath);
+
+        boolean learningMode = OpencvNativeClass.getLearningMode();
+        if (learningMode) {
+            btnLearn.setText("Learning: ON ");
+        } else {
+            btnLearn.setText("Learning: OFF");
+        }
+
+        if (debugMode) {
+            btnDebug.setText("Debug: ON ");
+        } else {
+            btnDebug.setText("Debug: OFF");
+        }
+
+        if (algo.equalsIgnoreCase(OpencvNativeClass.ALGO_GAUSSIAN)) {
+            btnFilterAlgo.setText("Gaussian");
+        } else if(algo.equalsIgnoreCase(OpencvNativeClass.ALGO_HISOGRAM)) {
+            btnFilterAlgo.setText("Histogram");
+        } else {
+            btnFilterAlgo.setText("Mixed");
+        }
+
         Log.d("NATIVE LOG", "Initialisation complete");
     }
 
@@ -96,10 +129,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void onCameraViewStarted(int width, int height) {
         mRgba = new Mat(height, width, CvType.CV_8UC4);
         mGray = new Mat(height, width, CvType.CV_8UC1);
-        mSilhoutte = new Mat(height, width, CvType.CV_8UC4);
+        mSilhoutte = new Mat(height, width, CvType.CV_8UC1);
 
-        Log.d("NATIVE LOG width ", Integer.toString(width));
-        Log.d("NATIVE LOG width ", Integer.toString(height));
+        Log.d("NATIVE-LOG width ", Integer.toString(width));
+        Log.d("NATIVE-LOG height ", Integer.toString(height));
     }
 
     @Override
@@ -115,7 +148,52 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mRgba = inputFrame.rgba();
 
         //OpencvNativeClass.convertGray(mRgba.getNativeObjAddr(), mGray.getNativeObjAddr());
-        OpencvNativeClass.getHandRegion(mRgba.getNativeObjAddr(), mSilhoutte.getNativeObjAddr());
-        return mSilhoutte;
+
+        if(debugMode) {
+            OpencvNativeClass.getHandRegion(mRgba.getNativeObjAddr(), mSilhoutte.getNativeObjAddr());
+            return mSilhoutte;
+        } else {
+            return mRgba;
+        }
+
+    }
+
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.btnLearn:
+                boolean learningMode = OpencvNativeClass.getLearningMode();
+                learningMode = !learningMode;
+                OpencvNativeClass.setLearningMode(learningMode);
+                if (learningMode) {
+                    btnLearn.setText("Learning: ON ");
+                } else {
+                    btnLearn.setText("Learning: OFF");
+                }
+                break;
+            case R.id.btnDebug:
+                debugMode = !debugMode;
+                if (debugMode) {
+                    btnDebug.setText("Debug: ON ");
+                } else {
+                    btnDebug.setText("Debug: OFF");
+                }
+                break;
+            case R.id.btnFilterAlgo:
+                if (algo.equalsIgnoreCase(OpencvNativeClass.ALGO_GAUSSIAN)) {
+                    algo = OpencvNativeClass.ALGO_HISOGRAM;
+                    btnFilterAlgo.setText("Histogram");
+                } else if(algo.equalsIgnoreCase(OpencvNativeClass.ALGO_HISOGRAM)) {
+                    algo = OpencvNativeClass.ALGO_MIXED;
+                    btnFilterAlgo.setText("Mixed");
+                } else {
+                    algo = OpencvNativeClass.ALGO_GAUSSIAN;
+                    btnFilterAlgo.setText("Gaussian");
+                }
+                OpencvNativeClass.setFilterAlgo(algo);
+                break;
+        }
+
     }
 }

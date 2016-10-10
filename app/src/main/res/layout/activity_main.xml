@@ -20,4 +20,37 @@
         android:layout_height="fill_parent"
         android:id="@+id/java_camera_view" />
 
+    <Button
+        android:id="@+id/btnLearn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginRight="18dp"
+        android:layout_marginEnd="18dp"
+        android:layout_marginBottom="22dp" />
+
+    <Button
+        android:id="@+id/btnDebug"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:layout_alignBaseline="@+id/btnLearn"
+        android:layout_alignBottom="@+id/btnLearn"
+        android:layout_toLeftOf="@+id/btnLearn"
+        android:layout_toStartOf="@+id/btnLearn"
+        android:layout_marginRight="17dp"
+        android:layout_marginEnd="17dp" />
+
+    <Button
+        android:id="@+id/btnFilterAlgo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:layout_above="@+id/btnLearn"
+        android:layout_toRightOf="@+id/btnDebug"
+        android:layout_toEndOf="@+id/btnDebug" />
+
 </RelativeLayout>

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <cstring>
+#include <vector>
 #include <opencv2/opencv.hpp>
 
 
@@ -16,6 +17,8 @@ extern "C" {
 
 
 #define  MAX_NUM_GAUSSIAN 100
+#define  NUM_HISTOGRAM_BINS  16
+#define  NUM_HISTOGRAM_HISTORY   5
 
 int toGray (cv::Mat img, cv::Mat& gray);
 bool LoadSkinColorProbTable();
@@ -27,13 +30,13 @@ void MakeLookUpTable(bool skin);
 float  GetProbability(cv::Mat sample);
 float GetProbabilityByLookUp(bool skin, int R, int G, int B);
 cv::Mat GetHandRegion(cv::Mat& src_img);
+float QueryProbability(int R, int G, int B);
 
 int n_mixture;
 int n_dim;
 float weight[MAX_NUM_GAUSSIAN];
 cv::Mat imgSegmented;
 cv::Mat p_image_gradient;
-cv::Mat p_image_hand_mask;
 cv::Mat mean_mat[MAX_NUM_GAUSSIAN];
 cv::Mat cov_mat[MAX_NUM_GAUSSIAN];
 cv::Mat cov_matI[MAX_NUM_GAUSSIAN];
@@ -42,8 +45,19 @@ char* filenameLookUpTableSkin = "/handy/skin.dis";
 const char* filenameLookUpTableNonSkin = "/handy/nonskin.dis";
 const char* filenameMgmSkin = "/handy/skin.mgm";
 const char* filenameMgmNonSkin = "/handy/nonskin.mgm";
+const char* filenameHandyXY = "/handy/handxy.txt";
 float probabilitySkin[256][256][256];
 float probabilityNonSkin[256][256][256];
+bool learn_mode = false;
+std::vector< std::vector<float> > vectPoints;
+
+int n_hist;
+int n_hist_index;
+int n_hist_pixel[NUM_HISTOGRAM_HISTORY][NUM_HISTOGRAM_BINS][NUM_HISTOGRAM_BINS][NUM_HISTOGRAM_BINS];
+int n_num_pixel[NUM_HISTOGRAM_HISTORY];
+int n_total_pixel;
+float maxDistValue = 128.799f;
+cv::Point2f maxDisttPoint(457, 213);
 
 JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_convertGray
   (JNIEnv *, jclass, jlong, jlong);
@@ -52,6 +66,18 @@ JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_initialis
 
 JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getHandRegion
         (JNIEnv *, jclass, jlong, jlong);
+
+JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getLearningMode
+        (JNIEnv *, jclass);
+
+JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_setLearningMode
+        (JNIEnv *, jclass, jboolean);
+
+JNIEXPORT jstring JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getFilterAlgo
+        (JNIEnv *, jclass);
+
+JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_setFilterAlgo
+        (JNIEnv *, jclass, jstring);
 
 #ifdef __cplusplus
 }

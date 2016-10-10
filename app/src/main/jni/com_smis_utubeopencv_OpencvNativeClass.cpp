@@ -2,12 +2,32 @@
 #include <android/log.h>
 #include <errno.h>
 #include <android/asset_manager.h>
+#include <fstream>
 
 #define  LOG_TAG    "testjni"
 #define  ALOG(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
 
+const static std::string ALGO_GAUSSIAN = "algo_gaussian";
+const static std::string ALGO_HISOGRAM = "algo_histogram";
+const static std::string ALGO_MIXED = "algo_mixed";
+
+float prevGaussianMax = 0;
+float prevHistogramMax = 0;
+float prevMixedMax = 0;
+float prevHistogramPixelMax = 0;
+std::string filterAlgo = ALGO_GAUSSIAN;
+
+namespace patch {
+    template<typename T>
+    std::string to_string(const T &n) {
+        std::ostringstream stm;
+        stm << n;
+        return stm.str();
+    }
+}
+
 bool LoadSkinColorProbTable() {
-    // printf("Load skin color probability table\n");
+
     if (!LoadLookUpTable(filenameLookUpTableSkin)) {
         printf("skin.dis not found or corrupted, creating fresh using skin.txt\n");
 
@@ -44,47 +64,67 @@ bool LoadSkinColorProbTable() {
 }
 
 
-/*
- * returns segmented_image(CV_8UC1) from src_img(3 channel)
- * */
 cv::Mat GetHandRegion(cv::Mat& src_img) {
 
     cv::Size src_size = src_img.size();
     if (imgSegmented.empty())
         imgSegmented = cv::Mat(src_size, CV_8UC1);
-    if (p_image_gradient.empty())
-        p_image_gradient = cv::Mat(src_size, CV_8UC1);
 
     int R = 0;
     int G = 0;
     int B = 0;
 
+
     for (int i = 0; i < src_img.rows; ++i) {
         for (int j = 0; j < src_img.cols; ++j) {
-            R = src_img.at<cv::Vec3b>(i, j)[0];
-            G = src_img.at<cv::Vec3b>(i, j)[1];
-            B = src_img.at<cv::Vec3b>(i, j)[2];
+            R = src_img.at<cv::Vec4b>(i, j)[0];
+            G = src_img.at<cv::Vec4b>(i, j)[1];
+            B = src_img.at<cv::Vec4b>(i, j)[2];
+
 
             float p_skin = GetProbabilityByLookUp(true, R, G, B);
             float p_non_skin = GetProbabilityByLookUp(false, R, G, B);
-
-            double prob = 0;
-
+            float prob = 0;
             if (p_non_skin != 0)
                 prob = p_skin / p_non_skin;
 
-//            ALOG("NATIVE LOG : Probability is  %f.", prob);
+            if (filterAlgo == ALGO_GAUSSIAN) {
+                prob = prob;
+                if (prob > prevGaussianMax) {
+                    ALOG("NATIVE-LOG : Gaussian Probability is  %f.", prob);
+                    prevGaussianMax = prob;
+                }
+            } else if (filterAlgo == ALGO_HISOGRAM) {
+                prob = QueryProbability(R, G, B);
+                if (prob > prevHistogramMax) {
+                    ALOG("NATIVE-LOG : Histogram Probability is  %f.", prob);
+                    prevHistogramMax = prob;
+                }
+            } else if (filterAlgo == ALGO_MIXED) {
+                float ALPHA = 0.01;
+                float probHist = QueryProbability(R, G, B);
+                prob = ALPHA * prob + (1 - ALPHA) * probHist;
+                if (prob > prevMixedMax) {
+                    ALOG("NATIVE-LOG : Mixed Probability is  %f.", prob);
+                    prevMixedMax = prob;
+                }
+            }
 
-            if (prob < 0.4)
+            if (prob < 0.4) {
                 imgSegmented.at<uchar>(i, j) = 0;
-            else
+//                src_img.at<cv::Vec4b>(i, j)[0] = 0;
+//                src_img.at<cv::Vec4b>(i, j)[1] = 0;
+//                src_img.at<cv::Vec4b>(i, j)[2] = 0;
+//                src_img.at<cv::Vec4b>(i, j)[3] = 0;
+            }
+            else {
                 imgSegmented.at<uchar>(i, j) = 255;
+            }
         }
     }
 
     return imgSegmented;
 }
-
 
 bool LoadFile(char const *filename) {
     printf("Loading file %s\n", filename);
@@ -153,18 +193,8 @@ bool LoadFile(char const *filename) {
     return true;
 }
 
-/*
- * It simply adds the Gaussian function with weight to the array of Gaussians
- * required for GMM.
- * These 3 arrays are effected:
- * MeanMat added to _MeanMat (an array of mean_matrices(3x1))
- * CovMat added to _CovMat (an array of covariance_matrices(3x3))
- * inverse of CovMat added to _CovMatI (an array of inverse_covariance_matrices(3x3))
- * Weight added to _Weight (an array of weights(float))
- * */
-
 bool AddGaussian(cv::Mat &pr_mean_mat, cv::Mat &pr_cov_mat,
-                        float pr_weight) {
+                 float pr_weight) {
     if (n_mixture == MAX_NUM_GAUSSIAN) {
         return false;
     }
@@ -191,7 +221,7 @@ void MakeLookUpTable(bool skin) {
                 local_sample_mat.at<float>(0) = R;
                 local_sample_mat.at<float>(1) = G;
                 local_sample_mat.at<float>(2) = B;
-                if(skin){
+                if (skin) {
                     probabilitySkin[R][G][B] = GetProbability(local_sample_mat);
 //					std::cout << "R: " << R << " G: " << G << " B: " << 100 << "    probability[R][G][B] = " << probabilitySkin[R][G][100] << std::endl;
                 }
@@ -206,10 +236,30 @@ void MakeLookUpTable(bool skin) {
     local_sample_mat.release();
 }
 
-/*
- * Mat sample is a 3x1 matrix containing R,G,B value
- * This method will return probability of the color for these R.G,B to be skin color
- * */
+
+float QueryProbability(int R, int G, int B) {
+    if (n_total_pixel == 0) {
+//        ALOG("NATIVE-LOG : returning 0");
+        return 0;
+    }
+
+    float local_num_pixel = 0;
+    float local_prob = 0;
+
+    for (int i = 0; i < n_hist; ++i) {
+        local_num_pixel += n_hist_pixel[i][R / NUM_HISTOGRAM_BINS][G
+                                                                   / NUM_HISTOGRAM_BINS][B /
+                                                                                         NUM_HISTOGRAM_BINS];
+    }
+
+    if (local_num_pixel > prevHistogramPixelMax) {
+        prevHistogramPixelMax = local_num_pixel;
+        ALOG("NATIVE-LOG local_num_pixel: %f", local_num_pixel);
+        ALOG("NATIVE-LOG n_total_pixel: %d", n_total_pixel);
+    }
+    local_prob = local_num_pixel / (float) n_total_pixel;
+    return local_prob;
+}
 
 float GetProbability(cv::Mat sample) {
     float P = 0.0;
@@ -225,26 +275,9 @@ float GetProbability(cv::Mat sample) {
     cv::Mat exp_mat(1, 1, CV_32FC1, &expo);
 
     for (int i = 0; i < n_mixture; i++) {
-//		cout << "sample matrix" << endl;;
-//		cout << sample << endl;
-//
-//		cout << "mean matrix" << endl;;
-//		cout << mean_mat[i] << endl;
-
         diff_mat = sample - mean_mat[i];
-
-//		cout << "diff mat" << endl;;
-//		cout << diff_mat << endl;
-
         diff_mat_trans = diff_mat.t();
-
-//		cout << "diff mat transpose" << endl;;
-//		cout << diff_mat_trans << endl;
-
         diff_mat = cov_matI[i] * diff_mat;
-
-//		cout << "cov_matI * diff_mat" << endl;;
-//		cout << diff_mat << endl;
 
         exp_mat = diff_mat_trans * diff_mat;
         expo *= (-0.5);
@@ -255,12 +288,11 @@ float GetProbability(cv::Mat sample) {
     diff_mat.release();
     diff_mat_trans.release();
 
-//	cout << "returned P= " << P << endl;
     return P;
 }
 
 float GetProbabilityByLookUp(bool skin, int R, int G, int B) {
-    if(skin) {
+    if (skin) {
         return probabilitySkin[R][G][B];
     } else {
         return probabilityNonSkin[R][G][B];
@@ -276,7 +308,7 @@ bool SaveLookUpTable(char const *filename) {
 
     for (int R = 0; R < 256; ++R) {
         for (int G = 0; G < 256; ++G) {
-            if(std::strcmp(filename, filenameLookUpTableSkin) == 0) {
+            if (std::strcmp(filename, filenameLookUpTableSkin) == 0) {
                 fwrite(probabilitySkin[R][G], sizeof(float), 256, fp);
             } else {
                 fwrite(probabilityNonSkin[R][G], sizeof(float), 256, fp);
@@ -286,7 +318,6 @@ bool SaveLookUpTable(char const *filename) {
     fclose(fp);
     return true;
 }
-
 
 bool LoadLookUpTable(char const *filename) {
 
@@ -299,7 +330,7 @@ bool LoadLookUpTable(char const *filename) {
 
     for (int R = 0; R < 256; ++R) {
         for (int G = 0; G < 256; ++G) {
-            if(std::strcmp(filename, filenameLookUpTableSkin) == 0) {
+            if (std::strcmp(filename, filenameLookUpTableSkin) == 0) {
                 if (fread(probabilitySkin[R][G], sizeof(float), 256, fp) != 256) {
                     ALOG("NATIVE-LOG: file %s reading failed", filename);
                     fclose(fp);
@@ -328,6 +359,122 @@ int toGray(cv::Mat img, cv::Mat &gray) {
         return 0;
 }
 
+bool readMask() {
+
+    std::ifstream file(filenameHandyXY);
+    std::string str;
+
+    if (!file) {
+        ALOG("NATIVE-LOG: file %s loading failed", filenameHandyXY);
+        return false;
+    }
+
+    while (std::getline(file, str)) {
+        std::vector<float> vect;
+        std::stringstream ss(str);
+        float i;
+        while (ss >> i) {
+            vect.push_back(i);
+
+            if (ss.peek() == ',')
+                ss.ignore();
+        }
+
+        std::string x = patch::to_string(vect[0]);
+        std::string y = patch::to_string(vect[1]);
+        vectPoints.push_back(vect);
+
+//        std::string log = "NATIVE-LOG: " + x + "," + y;
+//        ALOG(&log[0]);
+    }
+
+    return true;
+
+}
+
+bool drawMask(cv::Mat &img) {
+    for (int t = 0; t < vectPoints.size(); ++t) {
+        img.at<uchar>(vectPoints[t][0], vectPoints[t][1]) = 255;
+    }
+}
+
+void FeedFrame(cv::Mat &src_image, cv::Mat &mask_image, cv::Point maxDistPoint) {
+    if (src_image.empty() || mask_image.empty()) {
+        ALOG("NATIVE-LOG returning");
+        return;
+    }
+    // remove oldest history
+//    ALOG("NATIVE-LOG : n_total_pixel is %d", n_total_pixel);
+    n_total_pixel -= n_num_pixel[n_hist_index];
+
+    for (int i = 0; i < NUM_HISTOGRAM_BINS; ++i) {
+        for (int j = 0; j < NUM_HISTOGRAM_BINS; ++j) {
+            for (int k = 0; k < NUM_HISTOGRAM_BINS; ++k) {
+                n_hist_pixel[n_hist_index][i][j][k] = 0;
+            }
+        }
+    }
+
+    n_num_pixel[n_hist_index] = 0;
+
+
+    for (int i = 0; i < src_image.rows; i++) {  // rows = 640
+        for (int j = 0; j < src_image.cols; j++) {  // cols = 480
+            if (((int) mask_image.at<uchar>(cv::Point(j, i))) == 255) {
+                int R = src_image.at<cv::Vec4b>(i, j)[0];
+                int G = src_image.at<cv::Vec4b>(i, j)[1];
+                int B = src_image.at<cv::Vec4b>(i, j)[2];
+
+                n_hist_pixel[n_hist_index][R / NUM_HISTOGRAM_BINS][G / NUM_HISTOGRAM_BINS][B /
+                                                                                           NUM_HISTOGRAM_BINS]++;
+                n_num_pixel[n_hist_index]++;
+            }
+        }
+    }
+
+//    ALOG("NATIVE-LOG n_num_pixel[n_hist_index] : %d", n_num_pixel[n_hist_index]);
+    n_total_pixel += n_num_pixel[n_hist_index];
+
+    n_hist_index++;
+    if (n_hist_index == NUM_HISTOGRAM_HISTORY)
+        n_hist_index = 0;
+
+    if (n_hist < NUM_HISTOGRAM_HISTORY)
+        n_hist++;
+}
+
+void LearnColor(cv::Mat &src_image, cv::Point maxDistPoint, double maxDistValue) {
+    if (src_image.empty()) {
+        return;
+    }
+
+    cv::Mat imgCircle(src_image.size(), CV_8UC1);
+    imgCircle = cv::Scalar::all(0);
+    cv::circle(imgCircle, maxDistPoint, 0.7 * maxDistValue,
+               cv::Scalar(255), -1, 8, 0);
+    FeedFrame(src_image, imgCircle, maxDistPoint);
+}
+
+void resetLearning() {
+    n_hist = 0;
+    n_hist_index = 0;
+    n_total_pixel = 0;
+    for (int i = 0; i < NUM_HISTOGRAM_HISTORY; ++i) {
+        n_num_pixel[i] = 0;
+    }
+}
+
+void MyFilledCircle(cv::Mat &img, cv::Point center) {
+    int thickness = 1;
+    int lineType = 8;
+
+    cv::circle(img, center, maxDistValue,  // radius
+               255, thickness, lineType);
+}
+
+
+
+
 
 JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_convertGray
         (JNIEnv *, jclass, jlong addrRgba, jlong addrGray) {
@@ -340,9 +487,11 @@ JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_convertGray
 
 }
 
-JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_initialise(JNIEnv *env, jclass, jstring absPath) {
+JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_initialise(JNIEnv *env,
+                                                                                  jclass,
+                                                                                  jstring absPath) {
 
-    const char * path;
+    const char *path;
     jboolean isCopy;
     path = env->GetStringUTFChars(absPath, &isCopy);
     if (isCopy == JNI_TRUE) {
@@ -354,22 +503,35 @@ JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_initialis
     std::string nonskindis = buf;
     std::string skinmgm = buf;
     std::string nonskinmgm = buf;
+    std::string handxy = buf;
 
     skindis.append(filenameLookUpTableSkin);
     nonskindis.append(filenameLookUpTableNonSkin);
     skinmgm.append(filenameMgmSkin);
     nonskinmgm.append(filenameMgmNonSkin);
+    handxy.append(filenameHandyXY);
 
 
     filenameLookUpTableSkin = &skindis[0];
     filenameLookUpTableNonSkin = &nonskindis[0];
     filenameMgmSkin = &skinmgm[0];
-    filenameMgmNonSkin =&nonskinmgm[0];
+    filenameMgmNonSkin = &nonskinmgm[0];
+    filenameHandyXY = &handxy[0];
 
-    bool successBool = LoadSkinColorProbTable();
-    return (jboolean) successBool;
+    if (!readMask()) {
+        return false;
+    }
+
+    if (!LoadSkinColorProbTable()) {
+        return false;
+    }
+
+
+    resetLearning();
+
+    return (jboolean) true;
+
 }
-
 
 JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getHandRegion
         (JNIEnv *, jclass, jlong addrSrc, jlong addrTarget) {
@@ -377,16 +539,42 @@ JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getHandRegion
     cv::Mat &mTarget = *(cv::Mat *) addrTarget;
 
     mTarget = GetHandRegion(mSrc);
+    drawMask(mTarget);
+    MyFilledCircle(mTarget, maxDisttPoint);
 
-    ALOG("NATIVE LOG : got hand region");
+    if (learn_mode) {
+        LearnColor(mSrc, maxDisttPoint, maxDistValue);
+    }
 
-    int successInt = 0;
-    if (mSrc.rows == mTarget.rows && mSrc.cols == mTarget.cols)
-        successInt = 1;
-    else
-        successInt = 0;
-
-    return (jint) successInt;
+    return (jint) 0;
 }
 
 
+JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getLearningMode
+        (JNIEnv *, jclass) {
+    return learn_mode;
+}
+
+JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_setLearningMode
+        (JNIEnv *, jclass, jboolean newLearnMode) {
+    learn_mode = newLearnMode;
+}
+
+JNIEXPORT jstring JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getFilterAlgo
+        (JNIEnv *, jclass){
+    return (jstring)(&filterAlgo[0]);
+}
+
+JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_setFilterAlgo
+        (JNIEnv *env, jclass, jstring algo){
+
+    const char *temp;
+    jboolean isCopy;
+    temp = env->GetStringUTFChars(algo, &isCopy);
+    filterAlgo = temp;
+    if (isCopy == JNI_TRUE) {
+        (env)->ReleaseStringUTFChars(algo, temp);
+    }
+
+    ALOG("NATIVE-LOG : new filter algo -> %s", &filterAlgo[0]);
+}
