@@ -8,6 +8,7 @@
 	include ${OPENCVROOT}/sdk/native/jni/OpenCV.mk
 
 	LOCAL_MODULE := MyOpencvLibs
-	LOCAL_SRC_FILES := com_smis_utubeopencv_OpencvNativeClass.cpp
+	LOCAL_SRC_FILES := libs/ColorHistogram.cpp libs/Fingertip.cpp libs/FingertipPoseEstimation.cpp libs/FingertipTracker.cpp libs/MixGaussian.cpp libs/HandOperations.cpp libs/OpencvNativeClass.cpp
+	LOCAL_CFLAGS += -std=c++11
 	LOCAL_LDLIBS += -llog -landroid
 	include $(BUILD_SHARED_LIBRARY)

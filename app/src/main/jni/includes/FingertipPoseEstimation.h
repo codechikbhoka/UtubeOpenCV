@@ -1,0 +1,14 @@
+//
+// Created by gomchik-1404 on 15/10/16.
+//
+
+#ifndef UTUBEOPENCV_FINGERTIPPOSEESTIMATION_H
+#define UTUBEOPENCV_FINGERTIPPOSEESTIMATION_H
+
+
+class FingertipPoseEstimation {
+
+};
+
+
+#endif //UTUBEOPENCV_FINGERTIPPOSEESTIMATION_H
