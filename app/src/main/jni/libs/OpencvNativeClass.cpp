@@ -1,11 +1,23 @@
 #include "../includes/OpencvNativeClass.h"
 #include "../includes/ColorHistogram.h"
 #include "../includes/HandOperations.h"
+#include "../includes/Fingertip.h"
 #include "../includes/Global.h"
 
 
-HandOperations HO;
-ColorHistogram CH;
+HandOperations _HO;
+ColorHistogram _CH;
+Fingertip _FT;
+cv::Point2f _PrevCentroid, _CurrCentroid;
+float ringPositionX=0, ringPositionY=0;
+
+void MyFilledCircle(cv::Mat &img, cv::Point center) {
+    int thickness = 1;
+    int lineType = 8;
+
+    cv::circle(img, center, 0.7*ColorHistogram::maxDistValue,  // radius
+               255, thickness, lineType);
+}
 
 JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_convertGray
         (JNIEnv *, jclass, jlong addrRgba, jlong addrGray) {
@@ -28,15 +40,31 @@ JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getHandRegion
     cv::Mat mSrc = *(cv::Mat *) addrSrc;
     cv::Mat &mTarget = *(cv::Mat *) addrTarget;
 
-    mTarget = HO.GetHandRegion(mSrc);
+    mTarget = _HO.GetHandRegion(mSrc);
 
-    HO.drawMask(mTarget);
+    _HO.drawMask(mTarget);
 
-    HO.MyFilledCircle(mTarget, ColorHistogram::maxDisttPoint);
+    _HO.MyFilledCircle(mTarget, ColorHistogram::maxDisttPoint);
 
     if (ColorHistogram::learn_color_histogram) {
-        CH.LearnColor(mSrc, ColorHistogram::maxDisttPoint, ColorHistogram::maxDistValue);
+        _CH.LearnColor(mSrc, ColorHistogram::maxDisttPoint, ColorHistogram::maxDistValue);
     }
+
+    _FT.RefreshMaxDistPoint(mTarget);
+    _PrevCentroid = _CurrCentroid;
+    _CurrCentroid = _FT._maxDistPoint;
+
+
+
+    ringPositionX = _CurrCentroid.x;
+    ringPositionY = _CurrCentroid.y;
+
+
+//    ALOG("NATIVE-LOG _CurrCentroid.x:%lf   _CurrCentroid.y:%lf ringPositionX:%lf ringPositionY:%lf",
+//         _CurrCentroid.x, _CurrCentroid.y, ringPositionX, ringPositionY);
+
+    cv::Mat &mSrcRef = *(cv::Mat *) addrSrc;
+    MyFilledCircle(mSrcRef, _CurrCentroid);
 
     return (jint) 0;
 }
@@ -72,6 +100,19 @@ JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_setFilterAlgo
     return 0;
 }
 
+JNIEXPORT jfloat JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getRingPositionX
+        (JNIEnv *env, jclass){
+
+    return ringPositionX;
+}
+
+
+JNIEXPORT jfloat JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getRingPositionY
+        (JNIEnv *env, jclass){
+
+    return ringPositionY;
+}
+
 JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_initialise(JNIEnv *env,
                                                                                   jclass,
                                                                                   jstring absPath) {
@@ -101,16 +142,16 @@ JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_initialis
     HandOperations::filenameMgmNonSkin = &nonskinmgm[0];
     HandOperations::filenameHandyXY = &handxy[0];
 
-    if (!HO.readMask()) {
+    if (!_HO.readMask()) {
         return false;
     }
 
-    if (!HO.LoadSkinColorProbTable()) {
+    if (!_HO.LoadSkinColorProbTable()) {
         return false;
     }
 
 
-    CH.ResetLearning();
+    _CH.ResetLearning();
 
     return (jboolean) true;
 

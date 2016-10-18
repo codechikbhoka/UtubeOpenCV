@@ -15,9 +15,10 @@ extern "C" {
 #endif
 
 JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_convertGray
-  (JNIEnv *, jclass, jlong, jlong);
+        (JNIEnv *, jclass, jlong, jlong);
 
-JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_initialise(JNIEnv *, jclass, jstring absPath);
+JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_initialise(JNIEnv *, jclass,
+                                                                                  jstring absPath);
 
 JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getHandRegion
         (JNIEnv *, jclass, jlong, jlong);
@@ -33,6 +34,12 @@ JNIEXPORT jstring JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getFilterA
 
 JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_setFilterAlgo
         (JNIEnv *, jclass, jstring);
+
+JNIEXPORT jfloat JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getRingPositionX
+        (JNIEnv *env, jclass);
+
+JNIEXPORT jfloat JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getRingPositionY
+        (JNIEnv *env, jclass);
 
 #ifdef __cplusplus
 }

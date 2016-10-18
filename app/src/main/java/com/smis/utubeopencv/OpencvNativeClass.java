@@ -24,4 +24,8 @@ public class OpencvNativeClass {
 
     public native static int setFilterAlgo(String algo);
 
+
+    public native static float getRingPositionX();
+    public native static float getRingPositionY();
+
 }

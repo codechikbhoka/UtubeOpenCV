@@ -35,8 +35,6 @@ bool HandOperations::drawMask(cv::Mat &img) {
     if(img.empty()){
         ALOG("NATIVE-LOG img is empty");
         return false;
-    } else {
-        ALOG("NATIVE-LOG img.size is %d:%d and vectPoints.size() is %d", img.cols, img.rows, vectPoints.size());
     }
 
     int t = 0;
@@ -46,10 +44,8 @@ bool HandOperations::drawMask(cv::Mat &img) {
     return true;
 }
 
-
 cv::Mat HandOperations::GetHandRegion(cv::Mat &src_img) {
 
-    ALOG("NATIVE-LOG Getting Hand Region");
     cv::Size src_size = src_img.size();
     if (imgSegmented.empty())
         imgSegmented = cv::Mat(src_size, CV_8UC1);
