@@ -29,7 +29,7 @@
         android:text="" />
 
     <Button
-        android:id="@+id/btnDebug"
+        android:id="@+id/btnSceneMode"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignBaseline="@+id/btnLearn"
@@ -45,8 +45,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/btnLearn"
-        android:layout_toEndOf="@+id/btnDebug"
-        android:layout_toRightOf="@+id/btnDebug"
+        android:layout_toEndOf="@+id/btnSceneMode"
+        android:layout_toRightOf="@+id/btnSceneMode"
         android:text="" />
 
 </RelativeLayout>

@@ -1,22 +1,12 @@
 package com.smis.utubeopencv;
 
-import android.graphics.Color;
-import android.graphics.Interpolator;
 import android.graphics.Point;
-import android.graphics.drawable.ColorDrawable;
-import android.opengl.GLSurfaceView;
-import android.opengl.GLU;
-import android.opengl.Matrix;
 import android.os.Environment;
-import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
-import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.RelativeLayout;
@@ -35,11 +25,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     private static String TAG = "MainActivity";
     private JavaCameraView javaCameraView;
-    private Mat mRgba, mGray, mSilhoutte;
+    private Mat mRgba, mMixed, mSilhoutte;
     private MarshMallowPermission marshMallowPermission = new MarshMallowPermission(this);
     private Button btnLearn, btnDebug, btnFilterAlgo;
-    private boolean debugMode = false;
     private String algo = OpencvNativeClass.ALGO_GAUSSIAN;
+    private SceneMode sceneMode = SceneMode.RGB;
     private Renderer renderer;
 
     private Point actualWindowSize;
@@ -114,7 +104,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         btnLearn = (Button) findViewById(R.id.btnLearn);
         btnLearn.setOnClickListener(this);
-        btnDebug = (Button) findViewById(R.id.btnDebug);
+        btnDebug = (Button) findViewById(R.id.btnSceneMode);
         btnDebug.setOnClickListener(this);
         btnFilterAlgo = (Button) findViewById(R.id.btnFilterAlgo);
         btnFilterAlgo.setOnClickListener(this);
@@ -129,10 +119,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             btnLearn.setText("Learning: OFF");
         }
 
-        if (debugMode) {
-            btnDebug.setText("Debug: ON ");
-        } else {
-            btnDebug.setText("Debug: OFF");
+        if (sceneMode == SceneMode.RGB) {
+            btnDebug.setText("Mode: RGB");
+        } else if (sceneMode == SceneMode.SILHOUTTEMODE) {
+            btnDebug.setText("Mode: SIL");
         }
 
         if (algo.equalsIgnoreCase(OpencvNativeClass.ALGO_GAUSSIAN)) {
@@ -176,7 +166,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public void onCameraViewStarted(int width, int height) {
         mRgba = new Mat(height, width, CvType.CV_8UC4);
-        mGray = new Mat(height, width, CvType.CV_8UC1);
+        mMixed = new Mat(height, width, CvType.CV_8UC1);
         mSilhoutte = new Mat(height, width, CvType.CV_8UC1);
 
         Log.d("NATIVE-LOG width ", Integer.toString(width));
@@ -187,7 +177,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public void onCameraViewStopped() {
         mRgba.release();
-        mGray.release();
+        mMixed.release();
         mSilhoutte.release();
 
     }
@@ -196,17 +186,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
 
-        //OpencvNativeClass.convertGray(mRgba.getNativeObjAddr(), mGray.getNativeObjAddr());
+        OpencvNativeClass.getHandRegion(mRgba.getNativeObjAddr(), mSilhoutte.getNativeObjAddr());
+        float ringX =  ((float)actualWindowSize.y)*(OpencvNativeClass.getRingPositionX()/javaCameraViewHeight);
+        float ringY =  ((float)actualWindowSize.y)*(OpencvNativeClass.getRingPositionY()/javaCameraViewHeight);
+        renderer.setRingPosition(ringX, ringY);
 
-        if (debugMode) {
-            OpencvNativeClass.getHandRegion(mRgba.getNativeObjAddr(), mSilhoutte.getNativeObjAddr());
-            return mSilhoutte;
-        } else {
-            OpencvNativeClass.getHandRegion(mRgba.getNativeObjAddr(), mSilhoutte.getNativeObjAddr());
-            float ringX =  ((float)actualWindowSize.y)*(OpencvNativeClass.getRingPositionX()/javaCameraViewHeight);
-            float ringY =  ((float)actualWindowSize.y)*(OpencvNativeClass.getRingPositionY()/javaCameraViewHeight);
-            renderer.setRingPosition(ringX, ringY);
+        if (sceneMode == SceneMode.RGB) {
             return mRgba;
+        } else  {
+            return mSilhoutte;
         }
 
     }
@@ -225,12 +213,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     btnLearn.setText("Learning: OFF");
                 }
                 break;
-            case R.id.btnDebug:
-                debugMode = !debugMode;
-                if (debugMode) {
-                    btnDebug.setText("Debug: ON ");
+            case R.id.btnSceneMode:
+                if (sceneMode == SceneMode.RGB) {
+                    sceneMode = SceneMode.SILHOUTTEMODE;
+                    btnDebug.setText("Mode: SIL");
                 } else {
-                    btnDebug.setText("Debug: OFF");
+                    sceneMode = SceneMode.RGB;
+                    btnDebug.setText("Mode: RGB");
                 }
                 break;
             case R.id.btnFilterAlgo:

@@ -3,7 +3,7 @@
 #include "../includes/HandOperations.h"
 #include "../includes/Fingertip.h"
 #include "../includes/Global.h"
-
+#include "../includes/TrainOrientation.h"
 
 HandOperations _HO;
 ColorHistogram _CH;
@@ -42,29 +42,26 @@ JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getHandRegion
 
     mTarget = _HO.GetHandRegion(mSrc);
 
-    _HO.drawMask(mTarget);
+    _FT.RefreshMaxDistPoint(mTarget);
+    _PrevCentroid = _CurrCentroid;
+    _CurrCentroid = _FT._maxDistPoint;
+    ringPositionX = _CurrCentroid.x;
+    ringPositionY = _CurrCentroid.y;
 
+    getOrientation(mTarget);
+
+// Draw Mask and Circle on silhoutte image
+    //_HO.drawMask(mTarget);
     _HO.MyFilledCircle(mTarget, ColorHistogram::maxDisttPoint);
 
     if (ColorHistogram::learn_color_histogram) {
         _CH.LearnColor(mSrc, ColorHistogram::maxDisttPoint, ColorHistogram::maxDistValue);
     }
 
-    _FT.RefreshMaxDistPoint(mTarget);
-    _PrevCentroid = _CurrCentroid;
-    _CurrCentroid = _FT._maxDistPoint;
 
-
-
-    ringPositionX = _CurrCentroid.x;
-    ringPositionY = _CurrCentroid.y;
-
-
-//    ALOG("NATIVE-LOG _CurrCentroid.x:%lf   _CurrCentroid.y:%lf ringPositionX:%lf ringPositionY:%lf",
-//         _CurrCentroid.x, _CurrCentroid.y, ringPositionX, ringPositionY);
-
-    cv::Mat &mSrcRef = *(cv::Mat *) addrSrc;
-    MyFilledCircle(mSrcRef, _CurrCentroid);
+// Draw circle on RGB image
+    // cv::Mat &mSrcRef = *(cv::Mat *) addrSrc;
+    // MyFilledCircle(mSrcRef, _CurrCentroid);
 
     return (jint) 0;
 }
@@ -117,6 +114,7 @@ JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_initialis
                                                                                   jclass,
                                                                                   jstring absPath) {
 
+
     const char *path;
     jboolean isCopy;
     path = env->GetStringUTFChars(absPath, &isCopy);
@@ -129,6 +127,8 @@ JNIEXPORT jboolean JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_initialis
     std::string skinmgm = buf;
     std::string nonskinmgm = buf;
     std::string handxy = buf;
+
+    initTrainModel(buf);
 
     skindis.append(HandOperations::filenameLookUpTableSkin);
     nonskindis.append(HandOperations::filenameLookUpTableNonSkin);

@@ -1,8 +1,8 @@
 #include "../includes/Fingertip.h"
-#include "stdio.h"
-#include <opencv2/opencv.hpp>
-#include <vector>
 #include "../includes/Global.h"
+#include <opencv2/opencv.hpp>
+#include "stdio.h"
+#include <vector>
 
 
 cv::Mat DistTransform(cv::Mat silhoutte) {
@@ -38,12 +38,10 @@ void Fingertip::MyFilledCircle(cv::Mat img, cv::Point center) {
                cv::Scalar(0, 0, 255), thickness, lineType);
 }
 
-int Fingertip::RefreshMaxDistPoint(cv::Mat segmentedImg) {
-    if (segmentedImg.empty())
-        return 0;
-
-    cv::Mat ref_image(segmentedImg.size(), CV_8UC3);
-    cv::cvtColor(segmentedImg, ref_image, CV_GRAY2BGR);
+int Fingertip::RefreshMaxDistPoint(cv::Mat& segmentedImg) {
+    if (segmentedImg.empty()) {
+        return -1;
+    }
 
     if (_pDistImage.empty()) {
         _pDistImage = cv::Mat(segmentedImg.size(), CV_32FC1);
@@ -124,19 +122,7 @@ int Fingertip::RefreshMaxDistPoint(cv::Mat segmentedImg) {
             if (_maxDistPoint.y >= _pDistImage.size().height - 1)
                 _maxDistPoint.y--;
 
-            // Show reference image with Max Dist point
-            cv::cvtColor(_pDistImage, ref_image, CV_GRAY2BGR, 3);
-
-            // draw contour for
-            cv::drawContours(ref_image, contours, i,
-                    /*color*/cv::Scalar(255, 0, 255),
-                    /*thickness*/2,
-                    /*line type*/8,
-                    /*hierarchy*/hierarchy,
-                    /*max level*/0,
-                    /*offset*/cv::Point());
-
-            MyFilledCircle(ref_image, _maxDistPoint);
+            segmentedImg = _pHandImage;
 
             break;
         }
@@ -144,7 +130,7 @@ int Fingertip::RefreshMaxDistPoint(cv::Mat segmentedImg) {
     }
 
     if (hand_contour_id == -1) {
-        ALOG("NATIVE-LOG hand contour not found");
+//        ALOG("NATIVE-LOG hand contour not found");
         return -1;
     }
 

@@ -1,7 +1,3 @@
-//
-// Created by gomchik-1404 on 15/10/16.
-//
-
 #include "../includes/MixGaussian.h"
 #include "../includes/Global.h"
 #include "../includes/HandOperations.h"

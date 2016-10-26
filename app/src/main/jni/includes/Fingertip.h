@@ -40,7 +40,7 @@ public:
     float _candidatePointDists[MAX_END_POINT];
     float _candidatePointScores[MAX_END_POINT];
 
-    int RefreshMaxDistPoint(cv::Mat segmentedImg);
+    int RefreshMaxDistPoint(cv::Mat& segmentedImg);
 };
 
 
