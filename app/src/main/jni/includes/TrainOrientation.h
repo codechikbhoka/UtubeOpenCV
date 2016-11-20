@@ -9,6 +9,7 @@
 #define UTUBEOPENCV_TRAINORIENTATION_H
 
 int initTrainModel(std::string absPath);
-float getOrientation(cv::Mat mTarget);
+float getAzimuth(cv::Mat mTarget);
+float getElevation(cv::Mat mTarget);
 
 #endif //UTUBEOPENCV_TRAINORIENTATION_H

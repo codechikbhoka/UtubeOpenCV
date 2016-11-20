@@ -18,38 +18,32 @@ int initTrainModel(std::string absPath)
 {
     ALOG("NATIVE-LOG initTrainModel");
 
-    std::string RF_MODEL_PATH = absPath + "/handy/raw/random_trees.xml";
+    std::string RF_MODEL_PATH_AZIMUTH = absPath + "/handy/raw/random_trees_azimuth.xml";
+    std::string RF_MODEL_PATH_ELEVATION = absPath + "/handy/raw/random_trees_elevation.xml";
 
-    ALOG("NATIVE-LOG RF_MODEL_PATH %s", &RF_MODEL_PATH[0]);
+    ALOG("NATIVE-LOG RF_MODEL_PATH_AZIMUTH %s", &RF_MODEL_PATH_AZIMUTH[0]);
+    ALOG("NATIVE-LOG RF_MODEL_PATH_ELEVATION %s", &RF_MODEL_PATH_ELEVATION[0]);
 
-    if(!exist(RF_MODEL_PATH))
-    {
+    if(!exist(RF_MODEL_PATH_AZIMUTH) || !exist(RF_MODEL_PATH_ELEVATION)) {
         ///////// Model Training ///////////////////
-        ALOG("NATIVE-LOG Model not found... starting training");
+        ALOG("NATIVE-LOG Model not found...");
 
-        // 1. K Fold
-        // random forest
-        model *forest = model::return_obj();
-
-        utils ut;
-        ut.gen_main(10);
-        ut.k_fold_Cv(10);
-
-        // 2. Final Model
-        forest->mytraindataidx = cv::Mat(ut.vec).reshape(1).t();
-        forest->save_model();
     } else {
-        ALOG("NATIVE-LOG Model found... training not required");
-        mPred.load_model(absPath);
+        ALOG("NATIVE-LOG Models found... training not required");
+        mPred.load_models(absPath);
     }
-
-
 
     return 0;
 }
 
-float getOrientation(cv::Mat mTarget)
+float getAzimuth(cv::Mat mTarget)
 {
-    float azimuth = mPred.getOrientation(mTarget);
+    float azimuth = mPred.getOrientation(mTarget, mPred.AZIMUTH);
     return azimuth;
+}
+
+float getElevation(cv::Mat mTarget)
+{
+    float elevation = mPred.getOrientation(mTarget, mPred.ELEVATION);
+    return elevation;
 }

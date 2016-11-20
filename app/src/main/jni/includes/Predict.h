@@ -16,15 +16,17 @@ class predict
 public:
     predict() {};
 
-    void load_model(std::string absPath);
+    void load_models(std::string absPath);
     bool generate_normalized_vector(cv::Mat img);
-    void predict_output();
-    float getOrientation(cv::Mat img);
+    void predict_output(std::string which);
+    float getOrientation(cv::Mat img, std::string which);
 
     poseEstimation pose;
-    CvRTrees rtrees ;
-    cv::Mat pred_dist_vec;
-
-    std::vector<float> response_vec;
+    CvRTrees rtreesAzimuth;
+    CvRTrees rtreesElevation ;
+    cv::Mat feature_matrix;
+    static const std::string AZIMUTH;
+    static const std::string ELEVATION;
+    float response;
 
 };

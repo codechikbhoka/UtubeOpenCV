@@ -23,7 +23,7 @@ import org.rajawali3d.surface.RajawaliSurfaceView;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2, View.OnClickListener {
 
-    private static String TAG = "MainActivity";
+    private static final String TAG = "MainActivity";
     private JavaCameraView javaCameraView;
     private Mat mRgba, mMixed, mSilhoutte;
     private MarshMallowPermission marshMallowPermission = new MarshMallowPermission(this);
@@ -186,14 +186,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
 
+//        Log.d("NATIVE-LOG", "getting hand region");
         OpencvNativeClass.getHandRegion(mRgba.getNativeObjAddr(), mSilhoutte.getNativeObjAddr());
-        float ringX =  ((float)actualWindowSize.y)*(OpencvNativeClass.getRingPositionX()/javaCameraViewHeight);
-        float ringY =  ((float)actualWindowSize.y)*(OpencvNativeClass.getRingPositionY()/javaCameraViewHeight);
+        float ringX = ((float) actualWindowSize.y) * (OpencvNativeClass.getRingPositionX() / javaCameraViewHeight);
+        float ringY = ((float) actualWindowSize.y) * (OpencvNativeClass.getRingPositionY() / javaCameraViewHeight);
         renderer.setRingPosition(ringX, ringY);
-
         if (sceneMode == SceneMode.RGB) {
             return mRgba;
-        } else  {
+        } else {
             return mSilhoutte;
         }
 

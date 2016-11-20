@@ -48,7 +48,8 @@ JNIEXPORT jint JNICALL Java_com_smis_utubeopencv_OpencvNativeClass_getHandRegion
     ringPositionX = _CurrCentroid.x;
     ringPositionY = _CurrCentroid.y;
 
-    getOrientation(mTarget);
+    //getAzimuth(mTarget);
+    //getElevation(mTarget);
 
 // Draw Mask and Circle on silhoutte image
     //_HO.drawMask(mTarget);

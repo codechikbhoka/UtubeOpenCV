@@ -1,18 +1,26 @@
 #include "../includes/Predict.h"
 #include "../includes/Global.h"
 
-void predict::load_model(std::string absPath)
-{
-    std::string filename = absPath + "/handy/raw/random_trees.xml";
-    rtrees.load(&filename[0]);
+const std::string predict::AZIMUTH = "azimuth";
+const std::string predict::ELEVATION = "elevation";
 
+/*
+ * which : AZIMUTH or ELEVATION
+ * */
+void predict::load_models(std::string absPath) {
+    std::string filename = "";
+
+    filename = absPath + "/handy/raw/random_trees_azimuth.xml";
+    rtreesAzimuth.load(&filename[0]);
+
+    filename = absPath + "/handy/raw/random_trees_elevation.xml";
+    rtreesElevation.load(&filename[0]);
 }
 
-bool predict::generate_normalized_vector(cv::Mat img)
-{
+bool predict::generate_normalized_vector(cv::Mat img) {
     pose.image = img;
 
-    if(!pose.find_contour(img)){
+    if (!pose.find_contour(img)) {
         return false;
     }
 
@@ -20,40 +28,38 @@ bool predict::generate_normalized_vector(cv::Mat img)
     pose.sampling();
     pose.minmaxscaler(pose.sampled_distance_vector);
 
-    cv::Mat test_feature_matrix ;
-    test_feature_matrix = cv::Mat(1, 500, CV_32F);
+    feature_matrix = cv::Mat(1, 500, CV_32F);
 
     for (int i = 0; i < 500; ++i) {
-        test_feature_matrix.at<float>(0,i) = (float) pose.normalized_distance_vector[i];
+        feature_matrix.at<float>(0, i) = (float) pose.normalized_distance_vector[i];
     }
-    pred_dist_vec.push_back(test_feature_matrix);
 
     return true;
 }
 
-void predict::predict_output()
-{
-    for(int i=0; i<pred_dist_vec.rows; i++)
-    {
-        cv::Mat samplemat(pred_dist_vec, cv::Range(i,i+1));
-        float response = rtrees.predict(samplemat,cv::Mat());
-        response_vec.push_back(response);
+/*
+ * which : AZIMUTH or ELEVATION
+ * */
+void predict::predict_output(std::string which) {
+    if (AZIMUTH.compare(which) == 0) { // equal
+        response = rtreesAzimuth.predict(feature_matrix, cv::Mat());
+        ALOG("NATIVE-LOG azimuth : %f", response);
+    } else {
+        response = rtreesElevation.predict(feature_matrix, cv::Mat());
+        ALOG("NATIVE-LOG elevation : %f", response);
     }
 }
 
-float predict::getOrientation(cv::Mat img) {
+float predict::getOrientation(cv::Mat img, std::string which) {
 
-    if(!generate_normalized_vector(img)){
+    if (!generate_normalized_vector(img)) {
         return 0;
     }
 
-    predict_output();
+    predict_output(which);
 
-    ALOG("NATIVE-LOG response : %f", response_vec[0]);
-
-    return response_vec[0];
+    return response;
 }
-
 
 
 
